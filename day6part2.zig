@@ -25,7 +25,7 @@ fn getWinningCount(allocator: Allocator, data: []const u8) !u32 {
     const time = try getNumber(allocator, it.next().?);
     const max_distance = try getNumber(allocator, it.next().?);
 
-    // This could be optimized as the output is symetrical.
+    // This could be optimized as the output is symmetrical.
     var count: u32 = 0;
     for (1..time) |button_time| {
         const speed = button_time;
