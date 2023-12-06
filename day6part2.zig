@@ -20,24 +20,22 @@ test "Wait For It" {
     try std.testing.expectEqual(@as(u32, 71503), try getWinningCount(allocator, data));
 }
 
+/// Using the quadratic equation
+/// https://en.wikipedia.org/wiki/Quadratic_equation
+/// The solution speeds lie between the two roots.
 fn getWinningCount(allocator: Allocator, data: []const u8) !u32 {
     var it = std.mem.splitScalar(u8, data, '\n');
-    const time = try getNumber(allocator, it.next().?);
-    const max_distance = try getNumber(allocator, it.next().?);
-
-    // This could be optimized as the output is symmetrical.
-    var count: u32 = 0;
-    for (1..time) |button_time| {
-        const speed = button_time;
-        const duration = time - button_time;
-        const distance = speed * duration;
-        if (distance > max_distance)
-            count += 1;
-    }
-    return count;
+    const b = try getNumber(allocator, it.next().?); // time
+    const c = try getNumber(allocator, it.next().?); // distance
+    const delta = @sqrt(b * b - 4 * c);
+    const root1 = (b - delta) / 2;
+    const root2 = (b + delta) / 2;
+    const min = @floor(root1 + 1);
+    const max = @ceil(root2 - 1);
+    return @intFromFloat(max - min + 1);
 }
 
-fn getNumber(allocator: Allocator, line: []const u8) !u64 {
+fn getNumber(allocator: Allocator, line: []const u8) !f64 {
     const colon = std.mem.indexOfScalar(u8, line, ':').?;
     const text = line[colon + 1 ..];
 
@@ -47,5 +45,5 @@ fn getNumber(allocator: Allocator, line: []const u8) !u64 {
         if (char != ' ')
             try number_chars.append(char);
 
-    return try std.fmt.parseInt(u64, number_chars.items, 10);
+    return try std.fmt.parseFloat(f64, number_chars.items);
 }
