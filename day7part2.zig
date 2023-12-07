@@ -62,6 +62,7 @@ const Hand = struct {
     ranks: Ranks,
     bid: Currency,
 
+    /// Is `lhs` less than `rhs`?
     fn compare(_: void, lhs: Hand, rhs: Hand) bool {
         if (@intFromEnum(lhs.type) < @intFromEnum(rhs.type))
             return true;
@@ -163,3 +164,68 @@ const Evaluator = struct {
         };
     }
 };
+
+test "hand type without jokers" {
+    const allocator = std.testing.allocator;
+
+    var evaluator = try Evaluator.init(allocator);
+    defer evaluator.deinit();
+
+    const hand1 = try evaluator.evaluateCards("99999");
+    const hand2 = try evaluator.evaluateCards("88889");
+    const hand3 = try evaluator.evaluateCards("77788");
+    const hand4 = try evaluator.evaluateCards("66678");
+    const hand5 = try evaluator.evaluateCards("55667");
+    const hand6 = try evaluator.evaluateCards("44567");
+    const hand7 = try evaluator.evaluateCards("23456");
+    try std.testing.expectEqual(HandType.five_of_a_kind, hand1.hand_type);
+    try std.testing.expectEqual(HandType.four_of_a_kind, hand2.hand_type);
+    try std.testing.expectEqual(HandType.full_house, hand3.hand_type);
+    try std.testing.expectEqual(HandType.three_of_a_kind, hand4.hand_type);
+    try std.testing.expectEqual(HandType.two_pair, hand5.hand_type);
+    try std.testing.expectEqual(HandType.one_pair, hand6.hand_type);
+    try std.testing.expectEqual(HandType.high_card, hand7.hand_type);
+}
+
+test "hand type with jokers" {
+    const allocator = std.testing.allocator;
+
+    var evaluator = try Evaluator.init(allocator);
+    defer evaluator.deinit();
+
+    const hand1 = try evaluator.evaluateCards("JJJJJ");
+    const hand2 = try evaluator.evaluateCards("QJJQ2");
+    const hand3 = try evaluator.evaluateCards("QJQ23");
+    const hand4 = try evaluator.evaluateCards("QJQ22");
+    const hand5 = try evaluator.evaluateCards("JKKK2");
+    const hand6 = try evaluator.evaluateCards("QQQQ2");
+    const hand7 = try evaluator.evaluateCards("KTJJT");
+    const hand8 = try evaluator.evaluateCards("T55J5");
+    const hand9 = try evaluator.evaluateCards("QQQJA");
+    const hand10 = try evaluator.evaluateCards("2345J");
+    try std.testing.expectEqual(HandType.five_of_a_kind, hand1.hand_type);
+    try std.testing.expectEqual(HandType.four_of_a_kind, hand2.hand_type);
+    try std.testing.expectEqual(HandType.three_of_a_kind, hand3.hand_type);
+    try std.testing.expectEqual(HandType.full_house, hand4.hand_type);
+    try std.testing.expectEqual(HandType.four_of_a_kind, hand5.hand_type);
+    try std.testing.expectEqual(HandType.four_of_a_kind, hand6.hand_type);
+    try std.testing.expectEqual(HandType.four_of_a_kind, hand7.hand_type);
+    try std.testing.expectEqual(HandType.four_of_a_kind, hand8.hand_type);
+    try std.testing.expectEqual(HandType.four_of_a_kind, hand9.hand_type);
+    try std.testing.expectEqual(HandType.one_pair, hand10.hand_type);
+}
+
+test "hand comparison" {
+    const allocator = std.testing.allocator;
+
+    var evaluator = try Evaluator.init(allocator);
+    defer evaluator.deinit();
+
+    const cards1 = try evaluator.evaluateCards("JKKK2");
+    const cards2 = try evaluator.evaluateCards("QQQQ2");
+    const hand1 = Hand{ .bid = 0, .type = cards1.hand_type, .ranks = cards1.ranks };
+    const hand2 = Hand{ .bid = 0, .type = cards2.hand_type, .ranks = cards2.ranks };
+
+    // "JKKK2" should rank less than "QQQQ2"
+    try std.testing.expect(Hand.compare({}, hand1, hand2));
+}
