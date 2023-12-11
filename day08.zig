@@ -199,8 +199,14 @@ const Factors = struct {
     fn putFactors(self: *Factors, number: CountType) !void {
         const v: void = comptime {};
 
+        if (number == 2) {
+            try self.factors_set.put(2, v);
+        } else if (number == 3) {
+            try self.factors_set.put(3, v);
+        }
+
         // Brute force.
-        for (2..std.math.sqrt(number) + 1) |n| {
+        else for (2..std.math.sqrt(number) + 1) |n| {
             if (number % n == 0) {
                 try self.factors_set.put(@intCast(n), v);
                 try self.factors_set.put(@intCast(number / n), v);
