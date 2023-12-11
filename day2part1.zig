@@ -7,12 +7,12 @@ const Counts = struct {
 };
 
 pub fn main() !void {
-    const sum = try calculateSum("day2.txt");
+    const sum = try calculateSum("data/day2.txt");
     std.debug.print("sum = {d}\n", .{sum});
 }
 
 test "Cube Conundrum" {
-    try std.testing.expectEqual(@as(u32, 8), try calculateSum("day2 sample.txt"));
+    try std.testing.expectEqual(@as(u32, 8), try calculateSum("data/day2 sample.txt"));
 }
 
 fn calculateSum(filename: []const u8) !u32 {

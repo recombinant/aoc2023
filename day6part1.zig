@@ -6,7 +6,7 @@ pub fn main() !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const data = @embedFile("day6.txt");
+    const data = @embedFile("data/day6.txt");
 
     const margin = try getMargin(allocator, data);
     std.debug.print("margin of error is: {}\n", .{margin});
@@ -15,7 +15,7 @@ pub fn main() !void {
 test "Wait For It" {
     const allocator = std.testing.allocator;
 
-    const data = @embedFile("day6 sample.txt");
+    const data = @embedFile("data/day6 sample.txt");
 
     try std.testing.expectEqual(@as(u32, 288), try getMargin(allocator, data));
 }

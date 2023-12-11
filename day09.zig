@@ -2,7 +2,7 @@
 const std = @import("std");
 
 pub fn main() !void {
-    const data = @embedFile("day09.txt");
+    const data = @embedFile("data/day09.txt");
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
@@ -15,7 +15,7 @@ pub fn main() !void {
 }
 
 test "Mirage Maintenance part 1" {
-    const data = @embedFile("day09 sample.txt");
+    const data = @embedFile("data/day09 sample.txt");
 
     const allocator = std.testing.allocator;
 
@@ -25,7 +25,7 @@ test "Mirage Maintenance part 1" {
 }
 
 test "Mirage Maintenance part 2" {
-    const data = @embedFile("day09 sample.txt");
+    const data = @embedFile("data/day09 sample.txt");
 
     const allocator = std.testing.allocator;
 

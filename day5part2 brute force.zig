@@ -9,7 +9,7 @@ pub fn main() !void {
     var gardening = Gardening.init(allocator);
     defer gardening.deinit();
 
-    try gardening.load("day5.txt");
+    try gardening.load("data/day5.txt");
 
     var lowest_location: NumberType = std.math.maxInt(NumberType);
 
@@ -208,7 +208,7 @@ test "map" {
     var gardening = Gardening.init(allocator);
     defer gardening.deinit();
 
-    try gardening.load("day 5 sample.txt");
+    try gardening.load("data/day5 sample.txt");
 
     try std.testing.expectEqual(gardening.seed2soil.find(0), @as(NumberType, 0));
     try std.testing.expectEqual(gardening.seed2soil.find(1), @as(NumberType, 1));

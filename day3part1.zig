@@ -5,13 +5,13 @@ pub fn main() !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const sum = try calculateSum(allocator, "day3.txt");
+    const sum = try calculateSum(allocator, "data/day3.txt");
     std.debug.print("sum = {d}\n", .{sum});
 }
 
 test "Gear Ratios" {
     const allocator = std.testing.allocator;
-    try std.testing.expectEqual(@as(u32, 4361), try calculateSum(allocator, "day3 sample.txt"));
+    try std.testing.expectEqual(@as(u32, 4361), try calculateSum(allocator, "data/day3 sample.txt"));
 }
 
 fn calculateSum(allocator: std.mem.Allocator, filename: []const u8) !u32 {

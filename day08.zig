@@ -5,7 +5,7 @@ const CountType = u64;
 const CountSet = std.AutoArrayHashMap(CountType, void);
 
 pub fn main() !void {
-    const data = @embedFile("day08.txt");
+    const data = @embedFile("data/day08.txt");
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
@@ -22,8 +22,8 @@ pub fn main() !void {
 }
 
 test "Haunted Wasteland part 1" {
-    const data1 = @embedFile("day08 sample1.txt");
-    const data2 = @embedFile("day08 sample2.txt");
+    const data1 = @embedFile("data/day08 sample1.txt");
+    const data2 = @embedFile("data/day08 sample2.txt");
 
     const allocator = std.testing.allocator;
 
@@ -40,7 +40,7 @@ test "Haunted Wasteland part 1" {
 }
 
 test "Haunted Wasteland part 2" {
-    const data = @embedFile("day08 sample3.txt");
+    const data = @embedFile("data/day08 sample3.txt");
 
     const allocator = std.testing.allocator;
 
