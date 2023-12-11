@@ -1,4 +1,3 @@
-// Brute force.
 const std = @import("std");
 
 pub fn main() !void {
@@ -9,48 +8,24 @@ pub fn main() !void {
     var gardening = Gardening.init(allocator);
     defer gardening.deinit();
 
-    try gardening.load("data/day5.txt");
+    try gardening.load("data/day05.txt");
 
-    var lowest_location: NumberType = std.math.maxInt(NumberType);
+    std.debug.print("lowest location {?}\n", .{gardening.getLowestLocation()});
+}
 
-    for (gardening.seeds.items, 1..) |seed_range, i| {
-        std.debug.print("{} of {}\n", .{ i, gardening.seeds.items.len });
-        const begin = seed_range.start;
-        const end = seed_range.start + seed_range.length;
-        for (begin..end) |seed| {
-            const soil = gardening.seed2soil.find(seed);
-            const fertilizer = gardening.soil2fertilizer.find(soil);
-            const water = gardening.fertilizer2water.find(fertilizer);
-            const light = gardening.water2light.find(water);
-            const temperature = gardening.light2temperature.find(light);
-            const humidity = gardening.temperature2humidity.find(temperature);
-            const location = gardening.humidity2location.find(humidity);
-            lowest_location = @min(location, lowest_location);
-        }
-        // std.debug.print("Seed {d}, soil {d}, fertilizer {d}, water {d}, light {d}, temperature {d}, humidity {d}, location {}\n", .{
-        //     seed,
-        //     soil,
-        //     fertilizer,
-        //     water,
-        //     light,
-        //     temperature,
-        //     humidity,
-        //     location,
-        // });
-    }
+test "If You Give A Seed A Fertilizer" {
+    var gardening = Gardening.init(std.testing.allocator);
+    defer gardening.deinit();
 
-    std.debug.print("lowest location {}\n", .{lowest_location});
+    try gardening.load("data/day05 sample.txt");
+
+    try std.testing.expectEqual(@as(NumberType, 35), gardening.getLowestLocation().?);
 }
 
 const NumberType = u64;
 const NumberList = std.ArrayList(NumberType);
 
-const SeedRange = struct {
-    start: NumberType,
-    length: NumberType,
-};
-
-const Range = struct {
+const Mapping = struct {
     dest_start: NumberType,
     source_start: NumberType,
     length: NumberType,
@@ -58,24 +33,23 @@ const Range = struct {
 
 const Map = struct {
     allocator: std.mem.Allocator,
-    ranges: std.ArrayList(Range),
+    mappings: std.ArrayList(Mapping),
 
     fn init(allocator: std.mem.Allocator) Map {
         return Map{
             .allocator = allocator,
-            .ranges = std.ArrayList(Range).init(allocator),
+            .mappings = std.ArrayList(Mapping).init(allocator),
         };
     }
 
     fn deinit(self: *Map) void {
-        self.ranges.deinit();
+        self.mappings.deinit();
     }
 
     fn find(self: *Map, number: NumberType) NumberType {
-        for (self.ranges.items) |range| {
-            if (number >= range.source_start and number < range.source_start + range.length) {
-                // TODO: std.debug.print("{} {} {} {}\n", .{ number, range.source_start, range.dest_start, range.length });
-                return range.dest_start + number - range.source_start;
+        for (self.mappings.items) |mapping| {
+            if (number >= mapping.source_start and number < mapping.source_start + mapping.length) {
+                return mapping.dest_start + number - mapping.source_start;
             }
         }
         return number;
@@ -84,7 +58,7 @@ const Map = struct {
 
 const Gardening = struct {
     allocator: std.mem.Allocator,
-    seeds: std.ArrayList(SeedRange),
+    seeds: ?NumberList = null,
     seed2soil: Map,
     soil2fertilizer: Map,
     fertilizer2water: Map,
@@ -96,7 +70,6 @@ const Gardening = struct {
     fn init(allocator: std.mem.Allocator) Gardening {
         return Gardening{
             .allocator = allocator,
-            .seeds = std.ArrayList(SeedRange).init(allocator),
             .seed2soil = Map.init(allocator),
             .soil2fertilizer = Map.init(allocator),
             .fertilizer2water = Map.init(allocator),
@@ -108,7 +81,8 @@ const Gardening = struct {
     }
 
     fn deinit(self: *Gardening) void {
-        self.seeds.deinit();
+        if (self.seeds) |seeds|
+            seeds.deinit();
         self.seed2soil.deinit();
         self.soil2fertilizer.deinit();
         self.fertilizer2water.deinit();
@@ -116,6 +90,28 @@ const Gardening = struct {
         self.light2temperature.deinit();
         self.temperature2humidity.deinit();
         self.humidity2location.deinit();
+    }
+
+    fn getLowestLocation(self: *Gardening) ?NumberType {
+        if (self.seeds) |seeds| {
+            if (seeds.items.len == 0)
+                return null;
+
+            var lowest_location: NumberType = std.math.maxInt(NumberType);
+
+            for (seeds.items) |seed| {
+                const soil = self.seed2soil.find(seed);
+                const fertilizer = self.soil2fertilizer.find(soil);
+                const water = self.fertilizer2water.find(fertilizer);
+                const light = self.water2light.find(water);
+                const temperature = self.light2temperature.find(light);
+                const humidity = self.temperature2humidity.find(temperature);
+                const location = self.humidity2location.find(humidity);
+                lowest_location = @min(location, lowest_location);
+            }
+            return lowest_location;
+        }
+        return null;
     }
 
     fn load(self: *Gardening, filename: []const u8) !void {
@@ -180,22 +176,14 @@ const Gardening = struct {
     fn getSeeds(self: *Gardening, line: []const u8) void {
         var it = std.mem.splitSequence(u8, line, ": ");
         _ = it.next(); // discard
-        const seed_ranges = self.getNumbers(it.next().?);
-        defer self.allocator.free(seed_ranges);
-
-        for (0..seed_ranges.len / 2) |i| {
-            self.seeds.append(SeedRange{
-                .start = seed_ranges[i * 2],
-                .length = seed_ranges[i * 2 + 1],
-            }) catch unreachable;
-        }
+        self.seeds = NumberList.fromOwnedSlice(self.allocator, self.getNumbers(it.next().?));
     }
 
     fn appendToMap(self: *Gardening, map: *Map, line: []const u8) void {
         const numbers = self.getNumbers(line);
         defer self.allocator.free(numbers);
 
-        map.ranges.append(Range{
+        map.mappings.append(Mapping{
             .dest_start = numbers[0],
             .source_start = numbers[1],
             .length = numbers[2],
@@ -203,12 +191,11 @@ const Gardening = struct {
     }
 };
 
-test "map" {
-    const allocator = std.testing.allocator;
-    var gardening = Gardening.init(allocator);
+test "map/mapping" {
+    var gardening = Gardening.init(std.testing.allocator);
     defer gardening.deinit();
 
-    try gardening.load("data/day5 sample.txt");
+    try gardening.load("data/day05 sample.txt");
 
     try std.testing.expectEqual(gardening.seed2soil.find(0), @as(NumberType, 0));
     try std.testing.expectEqual(gardening.seed2soil.find(1), @as(NumberType, 1));

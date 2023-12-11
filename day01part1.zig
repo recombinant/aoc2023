@@ -3,12 +3,12 @@ const std = @import("std");
 pub fn main() !void {
     const stdout = std.io.getStdOut().writer();
 
-    const sum = try calculateSum("data/day1.txt");
+    const sum = try calculateSum("data/day01.txt");
     try stdout.print("{}\n", .{sum});
 }
 
 test "Trebuchet" {
-    try std.testing.expectEqual(@as(u32, 142), try calculateSum("data/day1 sample1.txt"));
+    try std.testing.expectEqual(@as(u32, 142), try calculateSum("data/day01 sample1.txt"));
 }
 
 fn calculateSum(filename: []const u8) !u16 {

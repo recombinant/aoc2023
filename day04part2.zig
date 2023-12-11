@@ -11,7 +11,7 @@ pub fn main() !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    var scratchcards = try ScratchCards.init(allocator, "data/day4.txt");
+    var scratchcards = try ScratchCards.init(allocator, "data/day04.txt");
     defer scratchcards.deinit();
 
     const count = scratchcards.getTotalCardsCount();
@@ -22,7 +22,7 @@ pub fn main() !void {
 test "Scratchcards" {
     const allocator = std.testing.allocator;
 
-    var scratchcards = try ScratchCards.init(allocator, "data/day4 sample.txt");
+    var scratchcards = try ScratchCards.init(allocator, "data/day04 sample.txt");
     defer scratchcards.deinit();
 
     try std.testing.expectEqual(@as(usize, 30), scratchcards.getTotalCardsCount());

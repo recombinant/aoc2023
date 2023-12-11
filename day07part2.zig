@@ -6,7 +6,7 @@ pub fn main() !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    const data = @embedFile("data/day7.txt");
+    const data = @embedFile("data/day07.txt");
 
     const margin = try getTotalWinnings(allocator, data);
     std.debug.print("total winnings: {}\n", .{margin});
@@ -15,7 +15,7 @@ pub fn main() !void {
 test "Camel Cards" {
     const allocator = std.testing.allocator;
 
-    const data = @embedFile("data/day7 sample.txt");
+    const data = @embedFile("data/day07 sample.txt");
 
     try std.testing.expectEqual(@as(Currency, 5905), try getTotalWinnings(allocator, data));
 }

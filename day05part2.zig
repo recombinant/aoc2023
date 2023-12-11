@@ -8,7 +8,7 @@ pub fn main() !void {
     var gardening = Gardening.init(allocator);
     defer gardening.deinit();
 
-    try gardening.load("data/day5.txt");
+    try gardening.load("data/day05.txt");
 
     std.debug.print("lowest location {}\n", .{gardening.getLowestLocation()});
 }
@@ -17,7 +17,7 @@ test "If You Give A Seed A Fertilizer" {
     var gardening = Gardening.init(std.testing.allocator);
     defer gardening.deinit();
 
-    try gardening.load("data/day5 sample.txt");
+    try gardening.load("data/day05 sample.txt");
 
     try std.testing.expectEqual(@as(NumberType, 46), gardening.getLowestLocation());
 }

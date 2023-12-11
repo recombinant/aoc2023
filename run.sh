@@ -1,0 +1,19 @@
+zig test day01part1.zig
+zig test day01part2.zig
+zig test day02part1.zig
+zig test day02part2.zig
+zig test day03part1.zig
+zig test day03part2.zig
+zig test day04part1.zig
+zig test day04part2.zig
+zig test day05part1.zig
+zig test day05part2.zig
+zig test day06part1.zig
+zig test day06part2.zig
+zig test day07part1.zig
+zig test day07part2.zig
+zig test day08.zig
+zig test day09.zig
+zig test day10.zig
+zig test day11.zig
+zig test day05part2\ brute\ force.zig

@@ -7,12 +7,12 @@ const Counts = struct {
 };
 
 pub fn main() !void {
-    const sum = try calculateSum("data/day2.txt");
+    const sum = try calculateSum("data/day02.txt");
     std.debug.print("sum = {d}\n", .{sum});
 }
 
 test "Cube Conundrum" {
-    try std.testing.expectEqual(@as(u32, 2286), try calculateSum("data/day2 sample.txt"));
+    try std.testing.expectEqual(@as(u32, 8), try calculateSum("data/day02 sample.txt"));
 }
 
 fn calculateSum(filename: []const u8) !u32 {
@@ -27,11 +27,12 @@ fn calculateSum(filename: []const u8) !u32 {
     var buf: [1024]u8 = undefined;
     while (try in_stream.readUntilDelimiterOrEof(&buf, '\n')) |line| {
         var it = std.mem.splitSequence(u8, line, ": ");
-        _ = getGameNumber(it.next().?);
+        const game_number = getGameNumber(it.next().?);
         const cube_counts = getCubeCounts(it.next().?);
 
-        const power = cube_counts.red * cube_counts.blue * cube_counts.green;
-        sum += power;
+        if (cube_counts.red <= 12 and cube_counts.green <= 13 and cube_counts.blue <= 14) {
+            sum += game_number;
+        }
     }
     return sum;
 }
