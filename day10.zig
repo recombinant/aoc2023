@@ -95,74 +95,84 @@ const Grid = struct {
         self.tile_grid[p.row][p.col] = tile;
     }
 
+    /// Every tile in the network has exactly two connections.
     /// Caller owns returned slice memory.
-    fn getConnectedPoints(self: Grid, p: Point) ![]Point {
-        const move_funcs = try self.getConnectPointOffsets(p);
-        defer self.allocator.free(move_funcs);
-        const connected_points = try self.allocator.alloc(Point, move_funcs.len);
-        for (move_funcs, 0..) |func, i|
-            connected_points[i] = func(p);
-        std.debug.assert(connected_points.len == 2);
-        return connected_points;
+    fn getConnectedPoints(self: Grid, p: Point) ![2]Point {
+        const optional_neighbors = try self.getNeighborOffsets(p);
+        const neighbors = optional_neighbors orelse unreachable;
+        var result: [2]Point = undefined;
+
+        for (neighbors, 0..) |neighbor, i| {
+            const p2 = p.add(neighbor);
+            result[i] = p2;
+        }
+        return result;
     }
 
-    const MoveFn = *const fn (Point) Point;
+    /// Get the unit distances to potentially connected neighbors.
+    /// There will be either two or none. Start `S` calls this on
+    /// each of its neighbors to find the two that connect to
+    /// it.
+    fn getNeighborOffsets(self: Grid, p: Point) !?[2]Point {
+        const I = Point.init;
 
-    /// What are the N, E, S & W point offsets from the current point `p`
-    /// for the two connected tiles?
-    /// Caller owns returned slice memory.
-    fn getConnectPointOffsets(self: Grid, p: Point) ![]MoveFn {
         if (self.at(p) == PipeTag.start) {
-            const r = self.size.width - 1;
-            const b = self.size.height - 1;
-            var directions = std.ArrayList(MoveFn).init(self.allocator);
-            defer directions.deinit();
+            var result = std.ArrayList(Point).init(self.allocator);
+            defer result.deinit();
 
-            const n = 1;
-            const e = 2;
-            const s = 4;
-            const w = 8;
+            // n, e, s & w
+            const unit_moves = [4]Point{ I(-1, 0), I(0, 1), I(1, 0), I(0, -1) };
+            const n = 1 << 0;
+            const e = 1 << 1;
+            const s = 1 << 2;
+            const w = 1 << 3;
             var bits: u4 = 0;
-            // Avoid going over the perimeter and ensure target connects in the Start direction.
-            if (p.row != 0 and self.okNorth(p)) {
-                try directions.append(Point.moveNorth);
-                bits |= n;
+            for (unit_moves, 0..) |unit_move, direction| {
+                // unsigned overflow arithmetic, no negative numbers
+                const p2 = p.add(unit_move);
+                if (p2.row >= self.size.height or p2.col >= self.size.width)
+                    continue;
+
+                // look at the neighbors to check who connects back.
+                const optional_neighbors = try self.getNeighborOffsets(p2);
+                if (optional_neighbors) |neighbors|
+                    for (neighbors) |p3| {
+                        if (p.equals(p2.add(p3))) {
+                            try result.append(unit_move);
+                            bits |= std.math.shl(u4, 1, direction);
+                            break;
+                        }
+                    };
             }
-            if (p.col != r and self.okEast(p)) {
-                try directions.append(Point.moveEast);
-                bits |= e;
-            }
-            if (p.row != b and self.okSouth(p)) {
-                try directions.append(Point.moveSouth);
-                bits |= s;
-            }
-            if (p.col != 0 and self.okWest(p)) {
-                try directions.append(Point.moveWest);
-                bits |= w;
-            }
-            // Start to its real PipeTag
+
+            // Change start `S` to its real PipeTag
             const tile = switch (bits) {
+                n | e => PipeTag.north_east,
                 n | s => PipeTag.north_south,
-                s | w => PipeTag.south_west,
+                n | w => PipeTag.north_west,
                 s | e => PipeTag.south_east,
                 e | w => PipeTag.east_west,
-                n | e => PipeTag.north_east,
-                n | w => PipeTag.north_west,
+                s | w => PipeTag.south_west,
                 else => unreachable, // not an AOC map - another pipe points at S
             };
             self.setAt(p, tile);
-            return try directions.toOwnedSlice();
+
+            var neighbors: [2]Point = undefined;
+            std.debug.assert(result.items.len == 2);
+            for (result.items, &neighbors) |src, *dest|
+                dest.* = src;
+
+            return neighbors;
         } else {
-            const moves = switch (self.at(p)) {
-                .north_south => &[_]MoveFn{ Point.moveNorth, Point.moveSouth },
-                .south_west => &[_]MoveFn{ Point.moveSouth, Point.moveWest },
-                .south_east => &[_]MoveFn{ Point.moveSouth, Point.moveEast },
-                .east_west => &[_]MoveFn{ Point.moveEast, Point.moveWest },
-                .north_east => &[_]MoveFn{ Point.moveNorth, Point.moveEast },
-                .north_west => &[_]MoveFn{ Point.moveNorth, Point.moveWest },
-                .start, .ground => &[0]MoveFn{},
+            return switch (self.at(p)) {
+                .north_east => [_]Point{ I(-1, 0), I(0, 1) },
+                .north_south => [_]Point{ I(-1, 0), I(1, 0) },
+                .north_west => [_]Point{ I(-1, 0), I(0, -1) },
+                .south_east => [_]Point{ I(1, 0), I(0, 1) },
+                .east_west => [_]Point{ I(0, 1), I(0, -1) },
+                .south_west => [_]Point{ I(1, 0), I(0, -1) },
+                .start, .ground => null, // No connected neighbors.
             };
-            return try self.allocator.dupe(MoveFn, moves);
         }
     }
 
@@ -193,8 +203,6 @@ const Grid = struct {
             gop.value_ptr.* = {};
 
             const connected_points = try self.getConnectedPoints(td.point);
-            defer self.allocator.free(connected_points);
-
             for (connected_points) |point| {
                 if (visited_set.contains(point))
                     continue;
@@ -207,7 +215,7 @@ const Grid = struct {
         return .{ .step_count = max_distance, .visited_set = visited_set };
     }
 
-    ///  `visited_set` can be found in the return of Grid.countEnclosedTiles()
+    ///  `visited_set` can be found in the return of Grid.countStepsToFarthestPoint()
     fn countEnclosedTiles(self: Grid, visited_set: VisitedSet) !u16 {
         var count: u16 = 0;
 
@@ -219,7 +227,7 @@ const Grid = struct {
                     switch (self.at(p)) {
                         .north_south, .north_east, .north_west => crossed = !crossed,
                         .east_west, .south_west, .south_east => {},
-                        .ground => unreachable, // No ground on perimeter.
+                        .ground => unreachable, // No ground on network, only pipes.
                         .start => unreachable, // S should have been replaced by the real thing.
                     }
                 else
@@ -248,34 +256,6 @@ const Grid = struct {
             }
         }
     }
-
-    /// Given a tile, can the tile to the north connect to it?
-    /// i.e does the tile to the north have a southerly connection?
-    /// Out of bounds must be checked before calling this function.
-    fn okNorth(self: Grid, p: Point) bool {
-        return switch (self.at(p.moveNorth())) {
-            .north_south, .south_west, .south_east, .start => true,
-            .east_west, .north_east, .north_west, .ground => false,
-        };
-    }
-    fn okEast(self: Grid, p: Point) bool {
-        return switch (self.at(p.moveEast())) {
-            .east_west, .north_west, .south_west, .start => true,
-            .north_south, .north_east, .south_east, .ground => false,
-        };
-    }
-    fn okSouth(self: Grid, p: Point) bool {
-        return switch (self.at(p.moveSouth())) {
-            .north_south, .north_east, .north_west, .start => true,
-            .east_west, .south_west, .south_east, .ground => false,
-        };
-    }
-    fn okWest(self: Grid, p: Point) bool {
-        return switch (self.at(p.moveWest())) {
-            .north_east, .east_west, .south_east, .start => true,
-            .north_south, .north_west, .south_west, .ground => false,
-        };
-    }
 };
 
 const PipeTag = enum(u8) {
@@ -293,18 +273,19 @@ const Point = struct {
     row: u16,
     col: u16,
 
-    /// This does not check for out of bounds.
-    fn moveNorth(self: Point) Point {
-        return Point{ .row = self.row - 1, .col = self.col };
+    fn init(row: i16, col: i16) Point {
+        return Point{
+            .row = @as(u16, @bitCast(row)),
+            .col = @as(u16, @bitCast(col)),
+        };
     }
-    fn moveEast(self: Point) Point {
-        return Point{ .row = self.row, .col = self.col + 1 };
+
+    fn add(self: Point, other: Point) Point {
+        return Point{ .row = self.row +% other.row, .col = self.col +% other.col };
     }
-    fn moveSouth(self: Point) Point {
-        return Point{ .row = self.row + 1, .col = self.col };
-    }
-    fn moveWest(self: Point) Point {
-        return Point{ .row = self.row, .col = self.col - 1 };
+
+    fn equals(self: Point, other: Point) bool {
+        return self.row == other.row and self.col == other.col;
     }
 };
 
@@ -333,6 +314,32 @@ const TileDistance = struct {
 fn tileDistanceCompare(context: void, a: TileDistance, b: TileDistance) std.math.Order {
     _ = context;
     return std.math.order(a.distance, b.distance);
+}
+
+test "getNeighbors" {
+    const data = @embedFile("data/day10 sample1.txt");
+    const allocator = std.testing.allocator;
+    var grid = try Grid.init(allocator, data);
+    defer grid.deinit();
+    const I = Point.init;
+
+    const neighbors = (try grid.getNeighborOffsets(I(3, 3))).?;
+    const expected_neigbors: [2]Point = .{ I(-1, 0), I(0, -1) };
+
+    try std.testing.expectEqualSlices(Point, &expected_neigbors, &neighbors);
+}
+
+test "getConnectedPoints" {
+    const data = @embedFile("data/day10 sample1.txt");
+    const allocator = std.testing.allocator;
+    var grid = try Grid.init(allocator, data);
+    defer grid.deinit();
+    const I = Point.init;
+
+    const connected = try grid.getConnectedPoints(I(3, 1));
+    const expected_connected: [2]Point = .{ I(2, 1), I(3, 2) };
+
+    try std.testing.expectEqualSlices(Point, &expected_connected, &connected);
 }
 
 /// Helper function for test "Pipe Maze part 1"
