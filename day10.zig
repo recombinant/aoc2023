@@ -46,6 +46,7 @@ test "Pipe Maze part 2" {
 const Grid = struct {
     allocator: std.mem.Allocator,
     tile_grid: [][]PipeTag,
+    start: Point,
     size: struct { width: usize, height: usize },
 
     fn init(allocator: std.mem.Allocator, data: []const u8) !Grid {
@@ -60,9 +61,21 @@ const Grid = struct {
             try tile_rows_list.append(tile_row);
         }
         const tile_grid = try tile_rows_list.toOwnedSlice();
+
+        // Find the start point
+        const start: Point = blk: {
+            for (tile_grid, 0..) |tile_row, row| {
+                for (tile_row, 0..) |tile, col|
+                    if (tile == PipeTag.start)
+                        break :blk Point{ .row = @truncate(row), .col = @truncate(col) };
+            }
+            unreachable;
+        };
+
         const grid = Grid{
             .allocator = allocator,
             .tile_grid = tile_grid,
+            .start = start,
             .size = .{ .width = tile_grid[0].len, .height = tile_grid.len },
         };
         return grid;
@@ -160,23 +173,13 @@ const Grid = struct {
 
     /// Caller owns returned VisitedSet memory.
     fn countStepsToFarthestPoint(self: *Grid) !struct { step_count: u16, visited_set: VisitedSet } {
-        // Find the start point
-        const start_point: Point = blk: {
-            for (self.tile_grid, 0..) |tile_row, row| {
-                for (tile_row, 0..) |tile, col|
-                    if (tile == PipeTag.start)
-                        break :blk Point{ .row = @truncate(row), .col = @truncate(col) };
-            }
-            unreachable;
-        };
-
         var visited_set = VisitedSet.init(self.allocator);
         // defer visited_set.deinit();
 
         var queue = TileDistancePriorityQueue.init(self.allocator, {});
         defer queue.deinit();
 
-        try queue.add(TileDistance{ .point = start_point, .distance = 0 });
+        try queue.add(TileDistance{ .point = self.start, .distance = 0 });
 
         var max_distance: u16 = 0;
 
