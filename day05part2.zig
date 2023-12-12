@@ -141,7 +141,16 @@ const Gardening = struct {
         var state = State.ready;
 
         var buf: [1024]u8 = undefined;
-        while (try in_stream.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+        var fbs = std.io.fixedBufferStream(&buf);
+        while (true) {
+            fbs.reset();
+            in_stream.streamUntilDelimiter(fbs.writer(), '\n', fbs.buffer.len) catch |err| switch (err) {
+                error.EndOfStream => if (fbs.getWritten().len == 0) {
+                    break;
+                },
+                else => |e| return e,
+            };
+            const line = fbs.getWritten();
             if (line.len == 0) {
                 state = .ready;
                 continue;
