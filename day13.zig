@@ -52,8 +52,8 @@ fn getAnswer1(allocator: std.mem.Allocator, data: []const u8) !u32 {
     return answer;
 }
 
-/// For every pattern toggle every point individually until a new reflection
-/// is found.
+/// For every pattern found in part 1 toggle every point individually
+/// until a new reflection is found.
 fn getAnswer2(allocator: std.mem.Allocator, data: []const u8) !u32 {
     var contribution: u32 = 0;
     // blocks of patterns within data
